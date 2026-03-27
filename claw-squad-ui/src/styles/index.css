@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply m-0 p-0 font-sans;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors;
+  }
+  
+  .card {
+    @apply bg-white rounded-xl shadow-lg p-4;
+  }
+}

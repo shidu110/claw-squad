@@ -1,0 +1,14 @@
+{
+  "name": "claw-squad",
+  "version": "1.0.0",
+  "description": "Dual-Team AI Competition Framework",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "start": "node dist/index.js"
+  },
+  "keywords": ["ai", "agent", "competition", "claw"],
+  "license": "MIT"
+}
