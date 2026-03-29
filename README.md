@@ -71,18 +71,18 @@
 
 ## 🤖 Role → Model Mapping
 
-| Role | Model | Rationale |
-|------|-------|-----------|
-| **architect** | GLM-5 | Complex reasoning, long-horizon planning |
-| **coder** | GLM-5 | Engineering-grade code generation |
-| **reviewer** | Kimi-K2.5 | Parallel multi-task review |
-| **tester** | Kimi-K2.5 | Parallel test generation |
-| **researcher** | Kimi-K2.5 | 256k context, parallel scraping |
-| **debugger** | GLM-5 | Deep analysis, terminal tools |
-| **security** | GLM-5 | Deep security analysis |
-| **performance** | GLM-5 | Deep optimization analysis |
-| **devops** | Kimi-K2.5 | Fast execution, parallel ops |
-| **default** | MiniMax | General tasks |
+| Role | CLI | Model | Rationale |
+|------|-----|-------|-----------|
+| **architect** | claude-glm | GLM-5 | Complex reasoning, long-horizon planning |
+| **coder** | claude-glm | GLM-5 | Engineering-grade code generation |
+| **reviewer** | codex-kimi | Kimi-K2.5 | Parallel multi-task review |
+| **tester** | codex-kimi | Kimi-K2.5 | Parallel test generation |
+| **researcher** | claude-kimi | Kimi-K2.5 | 256k context, parallel scraping |
+| **debugger** | claude-glm | GLM-5 | Deep analysis, terminal tools |
+| **security** | claude-glm | GLM-5 | Deep security analysis |
+| **performance** | claude-glm | GLM-5 | Deep optimization analysis |
+| **devops** | claude-kimi | Kimi-K2.5 | Fast execution, parallel ops |
+| **default** | claude-minimax | MiniMax | General tasks |
 
 ---
 

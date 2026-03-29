@@ -258,7 +258,7 @@ const ROLE_CLI_MAP = {
   'coder-fast': 'claude-minimax', // 快速任务 → MiniMax
   
   // 审查 - 使用 Kimi (并行多任务)
-  reviewer: 'claude-kimi',
+  reviewer: 'codex-kimi',
   
   // 测试 - Codex Kimi (并行测试)
   tester: 'codex-kimi',
