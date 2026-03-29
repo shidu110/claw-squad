@@ -224,9 +224,9 @@ export const ROLE_DEFINITIONS: Record<Role, RoleDefinition> = {
     role: 'reviewer',
     category: 'quality',
     description: '代码审查员，负责代码质量和改进建议',
-    defaultCLI: 'claude',
-    defaultModel: 'claude-haiku-4-5',
-    apiProvider: 'anthropic',
+    defaultCLI: 'codex',
+    defaultModel: 'o4-mini',
+    apiProvider: 'openai',
     capabilities: ['review', 'quality-check', 'suggestions', 'best-practices'],
     color: '#95E1D3',
     weight: 0.8
