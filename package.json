@@ -9,6 +9,16 @@
     "test": "jest",
     "start": "node dist/index.js"
   },
-  "keywords": ["ai", "agent", "competition", "claw"],
-  "license": "MIT"
+  "keywords": [
+    "ai",
+    "agent",
+    "competition",
+    "claw"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
+  }
 }

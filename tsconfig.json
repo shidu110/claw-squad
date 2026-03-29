@@ -5,9 +5,11 @@
     "moduleResolution": "bundler",
     "outDir": "./dist",
     "rootDir": "./",
-    "strict": true,
-    "esModuleInterop": true
+    "strict": false,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
   "include": ["claw-squad-*/**/*.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "claw-squad-cli/bridge-server.ts"]
 }

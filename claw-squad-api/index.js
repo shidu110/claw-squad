@@ -1,62 +1,49 @@
 /**
- * ClawSquad API v7 - Better TCP handling
+ * ClawSquad API v10 - CLI-based execution
+ * Uses direct Claude Code invocation instead of TCP
  */
-import http from 'http';
-import net from 'net';
+import { spawn } from 'child_process';
 
 const PORT = 3000;
+const http = require('http');
 
-function doTask(task) {
+function execClaude(task, timeout = 60000) {
   return new Promise((resolve) => {
-    const client = new net.Socket();
-    let buf = '';
+    const start = Date.now();
     
-    client.connect(9876, '127.0.0.1', () => {
-      const id = `api${Date.now()}`;
-      const msg = JSON.stringify({action:'exec', id, type:'claude', message:task}) + '\n';
-      client.write(msg);
+    // Use Claude Code CLI directly
+    const proc = spawn('/home/shidu10/.openclaw/skills/cli-orchestrator/node_modules/.bin/claude', [
+      'claude',
+      '--print',
+      '--no-input',
+      task
+    ], {
+      cwd: '/home/shidu10/ClawSquad'
     });
     
-    let settled = false;
-    const settle = (data) => {
-      if (settled) return;
-      settled = true;
-      client.destroy();
-      resolve(data);
-    };
+    let stdout = '';
+    let stderr = '';
     
-    client.on('data', (c) => {
-      buf += c.toString();
-      // Look for complete JSON in buffer
-      const idx = buf.indexOf('\n');
-      if (idx !== -1) {
-        const line = buf.substring(0, idx).trim();
-        buf = buf.substring(idx + 1);
-        if (line.startsWith('{')) {
-          try {
-            const json = JSON.parse(line);
-            if (json.type === 'result') {
-              settle({ok: true, data: json});
-              return;
-            }
-          } catch {}
-        }
-      }
-      // If buffer is very long, try parsing whole thing
-      if (buf.length > 5000) {
-        try {
-          const json = JSON.parse(buf);
-          if (json.type === 'result') {
-            settle({ok: true, data: json});
-          }
-        } catch {}
+    proc.stdout.on('data', (data) => { stdout += data.toString(); });
+    proc.stderr.on('data', (data) => { stderr += data.toString(); });
+    
+    proc.on('close', (code) => {
+      const duration = Date.now() - start;
+      if (code === 0) {
+        resolve({ success: true, result: stdout.trim(), duration });
+      } else {
+        resolve({ success: false, error: stderr || `exit ${code}`, duration });
       }
     });
     
-    client.on('close', () => settle({ok: false, partial: buf.substring(0, 200)}));
-    client.on('error', (e) => settle({ok: false, error: e.message}));
+    proc.on('error', (err) => {
+      resolve({ success: false, error: err.message, duration: Date.now() - start });
+    });
     
-    setTimeout(() => settle({ok: false, error: 'timeout'}), 120000);
+    setTimeout(() => {
+      proc.kill();
+      resolve({ success: false, error: 'timeout', duration: Date.now() - start });
+    }, timeout);
   });
 }
 
@@ -64,23 +51,40 @@ http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
   
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+  
   if (req.url === '/status') {
     res.writeHead(200);
-    res.end(JSON.stringify({ok: true}));
+    res.end(JSON.stringify({status: 'ok'}));
     return;
   }
   
   if (req.url === '/compete' && req.method === 'POST') {
     let body = '';
-    req.on('data', (c) => body += c);
+    req.on('data', c => body += c);
     req.on('end', async () => {
       try {
         const {task} = JSON.parse(body);
-        const [r1, r2] = await Promise.all([doTask(task), doTask(task)]);
+        console.log('[compete]', task?.slice(0, 40));
+        
+        const [r1, r2] = await Promise.all([
+          execClaude(task),
+          execClaude(task)
+        ]);
+        
+        console.log('[done] A:', r1.success, 'B:', r2.success);
+        
         res.writeHead(200);
         res.end(JSON.stringify({
-          teamA: r1.data?.result || r1.error || 'error',
-          teamB: r2.data?.result || r2.error || 'error'
+          success: true,
+          teamA: r1.success ? r1.result : r1.error,
+          teamB: r2.success ? r2.result : r2.error,
+          durationA: r1.duration,
+          durationB: r2.duration
         }));
       } catch (e) {
         res.writeHead(500);
@@ -92,4 +96,6 @@ http.createServer((req, res) => {
   
   res.writeHead(404);
   res.end('{}');
-}).listen(PORT, () => console.log('API on', PORT));
+}).listen(PORT, () => {
+  console.log(`🏢 API v10 on ${PORT} (CLI-based)`);
+});
