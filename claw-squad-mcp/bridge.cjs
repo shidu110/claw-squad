@@ -248,6 +248,7 @@ function spawnWorker(role, cliType, teamName = 'default') {
           id: workerId,
           role,
           cli: cliType,
+          status: 'idle',
           tmuxSession: sessionName,
           tmuxWindow: workerId,
           startedAt: Date.now()
@@ -274,6 +275,7 @@ function spawnWorker(role, cliType, teamName = 'default') {
     id: workerId,
     role,
     cli: cliType,
+    status: 'idle',
     process: proc,
     startedAt: Date.now()
   };
@@ -387,7 +389,24 @@ let bridgeReady = false;
 let messageBuffer = '';
 let mcpIdCounter = 0;
 const pendingRequests = new Map();
+const pendingRequestCreatedAt = new Map(); // id → timestamp
 const progressCallbacks = new Map();
+
+// ====================
+// Pending Request 超时清理
+// ====================
+const REQUEST_TIMEOUT = 60000;
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [id, _] of pendingRequests) {
+    if (pendingRequestCreatedAt.has(id) && now - pendingRequestCreatedAt.get(id) > REQUEST_TIMEOUT) {
+      pendingRequests.delete(id);
+      pendingRequestCreatedAt.delete(id);
+      progressCallbacks.delete(id);
+    }
+  }
+}, 30000);
 
 // 日志
 function log(...args) {
@@ -837,6 +856,7 @@ function handleToolCall(id, params, progressToken) {
       const localWorkers = getSpawnedWorkers();
       
       pendingRequests.set(taskId, (result) => {
+      pendingRequestCreatedAt.set(taskId, Date.now());
         sendMCPResult(id, { 
           content: [{ 
             type: 'text', 
@@ -872,6 +892,7 @@ function handleToolCall(id, params, progressToken) {
       sendToBridge({ type: 'get_active_tasks' });
       
       pendingRequests.set(taskId, (result) => {
+      pendingRequestCreatedAt.set(taskId, Date.now());
         sendMCPResult(id, {
           content: [{
             type: 'text',
@@ -898,6 +919,7 @@ function handleToolCall(id, params, progressToken) {
       sendToBridge({ type: 'cancel_task', taskId });
       
       pendingRequests.set(taskId, (result) => {
+      pendingRequestCreatedAt.set(taskId, Date.now());
         sendMCPResult(id, {
           content: [{
             type: 'text',
@@ -928,6 +950,7 @@ function handleToolCall(id, params, progressToken) {
       killAllWorkers();
       
       pendingRequests.set(reqId, (result) => {
+      pendingRequestCreatedAt.set(reqId, Date.now());
         sendMCPResult(id, {
           content: [{
             type: 'text',
