@@ -31,6 +31,7 @@ const RECONNECT_TIMEOUT = 5000;
 const WORKER_TIMEOUT = 3000;
 
 const MAX_RECONNECT_ATTEMPTS = 10;
+const MAX_RECONNECT_DELAY = 30000; // 30秒
 
 // 解析命令行参数
 function parseArgs() {

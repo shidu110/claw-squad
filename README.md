@@ -69,20 +69,115 @@
 
 ---
 
-## 🤖 Role → Model Mapping
+## 🤖 Role → Model Mapping (26 roles)
 
+### 🔧 Engineering (8)
 | Role | CLI | Model | Rationale |
 |------|-----|-------|-----------|
 | **architect** | claude-glm | GLM-5 | Complex reasoning, long-horizon planning |
 | **coder** | claude-glm | GLM-5 | Engineering-grade code generation |
-| **reviewer** | codex-kimi | Kimi-K2.5 | Parallel multi-task review |
-| **tester** | codex-kimi | Kimi-K2.5 | Parallel test generation |
-| **researcher** | claude-kimi | Kimi-K2.5 | 256k context, parallel scraping |
+| **coder-alt** | codex-kimi | Kimi-K2.5 | Alternative model for diverse solutions |
 | **debugger** | claude-glm | GLM-5 | Deep analysis, terminal tools |
+| **devops** | claude-kimi | Kimi-K2.5 | Fast execution, parallel ops |
 | **security** | claude-glm | GLM-5 | Deep security analysis |
 | **performance** | claude-glm | GLM-5 | Deep optimization analysis |
-| **devops** | claude-kimi | Kimi-K2.5 | Fast execution, parallel ops |
-| **default** | claude-minimax | MiniMax | General tasks |
+| **refactorer** | claude-glm | GLM-5 | Code quality and restructuring |
+
+### 🔬 Research & Analysis (4)
+| Role | CLI | Model | Rationale |
+|------|-----|-------|-----------|
+| **researcher** | claude-kimi | Kimi-K2.5 | 256k context, parallel scraping |
+| **analyst** | claude-glm | GLM-5 | Data analysis and insights |
+| **planner** | claude-kimi | Kimi-K2.5 | Task planning and scheduling |
+| **advisor** | claude-glm | GLM-5 | Strategic recommendations |
+
+### ✅ Quality & Process (5)
+| Role | CLI | Model | Rationale |
+|------|-----|-------|-----------|
+| **reviewer** | claude-kimi | Kimi-K2.5 | Code quality and review (auto-added) |
+| **tester** | codex-kimi | Kimi-K2.5 | Test generation |
+| **qa** | claude-kimi | Kimi-K2.5 | Quality assurance |
+| **tech-writer** | claude-kimi | Kimi-K2.5 | Documentation |
+| **pm** | claude-kimi | Kimi-K2.5 | Product management |
+
+### 🎭 Meta & Debate (7) ← 特色
+| Role | CLI | Model | Rationale |
+|------|-----|-------|-----------|
+| **critic** | claude-glm | GLM-5 | Challenges assumptions |
+| **devils-advocate** | claude-glm | GLM-5 | Argues against consensus |
+| **optimist** | claude-kimi | Kimi-K2.5 | Focuses on benefits |
+| **pessimist** | claude-kimi | Kimi-K2.5 | Focuses on risks |
+| **synthesizer** | claude-glm | GLM-5 | Integrates perspectives |
+| **facilitator** | claude-glm | GLM-5 | Meeting moderation |
+| **guardian** | claude-glm | GLM-5 | Boundary checking (auto-added) |
+
+### 🛠️ Utility (2)
+| Role | CLI | Model | Rationale |
+|------|-----|-------|-----------|
+| **utility** | opencode | default | General-purpose tools |
+| **explorer** | claude-kimi | Kimi-K2.5 | Code exploration |
+
+---
+
+## 💡 Task → Role Auto-Mapping
+
+Each task automatically infers required roles:
+
+| Task Keywords | Inferred Roles | Auto-Added |
+|---------------|----------------|------------|
+| implement/build/create | architect + coder | reviewer + guardian |
+| debug/fix | debugger + reviewer | guardian |
+| optimize/refactor | performance + refactorer | reviewer |
+| deploy | devops + architect | reviewer |
+| security/audit | security + architect | reviewer + guardian |
+| research/survey | researcher + analyst | - |
+| analyze | analyst + researcher | guardian |
+| review | reviewer + critic | guardian |
+| test | tester + qa | reviewer |
+| discuss/debate | facilitator + optimist + pessimist + critic | synthesizer |
+
+> **Note:** `reviewer` and `guardian` are **mandatory** for every task.
+
+---
+
+## 🎙️ Debate Meeting Mode ← 核心特色
+
+CEO can convene a debate meeting for team discussion:
+
+```
+CEO triggers: "debate the microservices architecture?"
+       ↓
+┌─────────────────────────────────────────────────┐
+│            Debate Meeting                        │
+│                                                  │
+│  Facilitator: "Round 1 - opening statements"     │
+│                                                  │
+│  Optimist: "Microservices enable independent..." │
+│  Pessimist: "But adds complexity..."            │
+│  Critic: "The proposal has XX issues..."         │
+│  Devils-Advocate: "I oppose because..."          │
+│                                                  │
+│  ... (3 rounds by default)                       │
+│                                                  │
+│  Synthesizer: "Based on all perspectives..."     │
+│  Final verdict → CEO makes decision              │
+└─────────────────────────────────────────────────┘
+```
+
+**Trigger phrases:** "debate...", "discuss pros/cons", "hold a meeting...", "team evaluation"
+
+---
+
+## 🔄 Execute → Review → Improve Workflow
+
+Every task follows this mandatory flow:
+
+```
+1. Execute   → Worker team completes assigned tasks
+2. Review    → reviewer: quality checks | guardian: boundary checks
+3. Improve   → Coder addresses review feedback
+4. Done      → Final output with all improvements incorporated
+```
 
 ---
 
