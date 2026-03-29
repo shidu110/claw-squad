@@ -1,133 +1,148 @@
-# ClawSquad 架构状态报告
-## v2.5.0 | 2026-03-29
+# ClawSquad v2.6 Architecture Status
+
+**Last Updated:** 2026-03-29
 
 ---
 
-## 已完成 ✅
+## ✅ Completed Features
 
-| 功能 | 状态 | 说明 |
-|------|------|------|
-| Bridge Server | ✅ | TCP Hub，消息路由 |
-| MCP Bridge | ✅ | OpenClaw ↔ Bridge Server |
-| Session 管理 | ✅ | 创建/列表/重置 |
-| 进度通知 | ✅ | Progress notifications |
-| 任务取消 | ✅ | cancel_task, cancel_all |
-| Worker Cancel 处理 | ✅ | Orchestrator kill 进程 |
-| **自动 Spawn Worker** | ✅ | **MCP Bridge 直接 spawn** |
-| 26 角色定义 | ✅ | Engineering/Research/Meta/Utility |
-| Execute→Review→Improve | ✅ | CEO Brain 三阶段 |
-| 辩论会议结构 | ✅ | facilitator + 参与者 |
+| Feature | Status | Since |
+|---------|--------|-------|
+| Bridge Server (TCP Hub) | ✅ Stable | v2.5 |
+| MCP Bridge | ✅ Stable | v2.5 |
+| Session Management | ✅ Stable | v2.5 |
+| Progress Notifications | ✅ Stable | v2.5 |
+| Task Cancellation | ✅ Stable | v2.5 |
+| Auto Spawn Workers | ✅ Stable | v2.5 |
+| 26 Role Definitions | ✅ Stable | v2.5 |
+| tmux Backend | ✅ Stable | v2.6 |
+| Worker Pool | ✅ Stable | v2.6 |
+| Graceful Shutdown | ✅ Stable | v2.6 |
+| Prometheus Metrics | ✅ Stable | v2.6 |
+| Multi-Model Assignment | ✅ Stable | v2.6 |
+| Bridge Cluster Manager | ✅ Stable | v2.6 |
+| Auto-Reconnect | ✅ Stable | v2.6 |
 
 ---
 
-## v2.5 架构图
+## 🏗️ v2.6 Architecture
 
 ```
-OpenClaw (用户)
+OpenClaw (CEO)
     ↓ MCP stdio
 ┌─────────────────────────────────────────────────────┐
-│ MCP Bridge (v2.5)                                   │
-│  • 任务协调 (coordinate_team)                        │
-│  • Worker 自动 spawn (getOrCreateWorker)            │
-│  • Session 管理                                     │
-│  • 进度通知                                         │
+│ MCP Bridge (v2.6)                                   │
+│  ├─ Session Management (TTL 24h, max 100)          │
+│  ├─ Worker Auto-Spawn + State Tracking              │
+│  ├─ Worker Pool (CLAWSQUAD_POOL=1)                 │
+│  ├─ Pending Request Timeout Cleanup                │
+│  ├─ Bridge Server Auto-Reconnect                   │
+│  ├─ Graceful Shutdown                              │
+│  └─ Prometheus Metrics                             │
 └────────────────────┬────────────────────────────────┘
-                     │ TCP (Bridge Server)
+                     │ TCP (port 9876)
                      ↓
 ┌─────────────────────────────────────────────────────┐
 │ Bridge Server (TCP Hub)                             │
-│  • 消息路由 (CEO ↔ Worker)                         │
-│  • 任务追踪 (activeTasks)                          │
-│  • 取消处理                                         │
-└────┬────────────┬───────────────────────────────┬────┘
-     │            │                               │
-     ↓            ↓                               ↓
-┌─────────┐ ┌──────────┐ ┌──────────────┐
-│ coder-1 │ │ tester-2 │ │ reviewer-3  │
-│(spawned)│ │(spawned) │ │ (spawned)    │
-└─────────┘ └──────────┘ └──────────────┘
-     │            │               │
-     ↓            ↓               ↓
-Claude Code   Codex CLI      Claude Code
+│  ├─ CEO ↔ Worker Message Routing                   │
+│  ├─ Worker Registration                            │
+│  ├─ Task Tracking                                  │
+│  ├─ Debate Sessions                               │
+│  └─ Status Broadcast                               │
+└──────┬────────────┬───────────────────────┬──────────┘
+       │            │                       │
+       ↓            ↓                       ↓
+┌───────────┐ ┌───────────┐          ┌───────────┐
+│ Architect │ │  Coder    │          │ Reviewer  │
+│  (GLM-5)  │ │  (GLM-5)  │          │(Kimi-K2)  │
+└───────────┘ └───────────┘          └───────────┘
+       │            │                       │
+       └────────────┴───────────────────────┘
+                    ↓
+           tmux (optional): workers in windows
 ```
 
 ---
 
-## 消息流
+## 📁 Core Files
 
-### 1. coordinate_team (自动 Spawn)
-```
-用户 → MCP Bridge: coordinate_team { roles: ["coder", "reviewer"] }
-                                    ↓
-                    getOrCreateWorker("coder") → spawn Claude Code
-                    getOrCreateWorker("reviewer") → spawn Claude Code
-                                    ↓
-                    Bridge Server: 任务路由到 coder-1, reviewer-2
-```
+| File | Purpose |
+|------|---------|
+| `claw-squad-mcp/bridge.cjs` | MCP Bridge - OpenClaw ↔ Bridge Server |
+| `claw-squad-cli/bridge-server.cjs` | TCP Hub - Message routing |
+| `claw-squad-cli/bridge-cluster-manager.cjs` | Multi-bridge cluster |
+| `claw-squad-cli/tmux-backend.cjs` | tmux integration |
+| `claw-squad-core/ceo-brain.ts` | CEO decision logic |
+| `claw-squad-core/role-config.ts` | Role definitions |
+| `claw-squad-core/team-factory.ts` | Team/Agent lifecycle |
 
-### 2. cancel_all_tasks
+---
+
+## 🔧 Configuration
+
+### Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CLAWSQUAD_TMUX` | - | Enable tmux mode |
+| `CLAWSQUAD_POOL` | - | Enable worker pool |
+| `CLAWSQUAD_POOL_MIN` | 1 | Min idle workers |
+| `CLAWSQUAD_POOL_MAX` | 3 | Max idle workers |
+
+### Role → Model Mapping
+
+| Role | Model | CLI |
+|------|-------|-----|
+| architect | GLM-5 | claude-glm |
+| coder | GLM-5 | claude-glm |
+| reviewer | Kimi-K2.5 | claude-kimi |
+| tester | Kimi-K2.5 | codex-kimi |
+| researcher | Kimi-K2.5 | claude-kimi |
+| debugger | GLM-5 | claude-glm |
+| security | GLM-5 | claude-glm |
+| devops | Kimi-K2.5 | claude-kimi |
+
+---
+
+## 📊 Metrics
+
+Access via `get_metrics` tool:
+
 ```
-用户 → MCP Bridge: cancel_all_tasks
-                   ↓
-        Bridge Server: cancel_all (取消所有任务)
-                   ↓
-        MCP Bridge: killAllWorkers() (Kill 所有 CLI 进程)
-                   ↓
-        返回: "✓ Cancelled N tasks, Killed M workers"
+Uptime, Tasks completed/failed
+Workers spawned/killed, Active/Idle count
+Pool size, Pending requests
+Timeouts, Reconnect attempts
 ```
 
 ---
 
-## 核心文件
+## 🚀 Git Log
 
 ```
-ClawSquad/
-├── claw-squad-mcp/bridge.cjs        # v2.5 ✅ (自动 spawn)
-├── claw-squad-cli/bridge-server.cjs # v2.5 ✅ (TCP Hub)
-├── claw-squad-cli/orchestrator.ts   # v2.1 ✅ (CLI 工具)
-├── claw-squad-core/ceo-brain.ts      # v2.2 ✅ (CEO 逻辑)
-└── ARCHITECTURE_STATUS.md           # 本文件
+f4f6275 feat(multi-model): assign different models to roles
+809410c feat(cluster): multi-bridge cluster manager
+8088098 feat(metrics): Prometheus-style metrics
+507b9b4 feat(pool+shutdown): worker pool + graceful shutdown
+dbc6e7c feat(v2.6): tmux backend
+338bcac feat(v2.5): major architecture upgrade
 ```
 
 ---
 
-## 待完成 (非紧急)
+## 📋 TODO
 
-| 功能 | 优先级 | 说明 |
-|------|--------|------|
-| CEO Brain debate 逻辑 | P1 | 辩论会议真正执行 |
-| Worker 池 (预启动) | P2 | 性能优化 |
-| Worker 生命周期管理 | P2 | 重连、状态监控 |
-| MCP Bridge ↔ Bridge Server 重连 | P2 | 网络恢复 |
+| Priority | Item | Status |
+|----------|------|--------|
+| P1 | Unit tests (Vitest) | Pending |
+| P1 | Documentation website | Pending |
+| P2 | Kubernetes deployment | Pending |
+| P2 | Worker health dashboard | Pending |
+| P3 | Horizontal scaling (multiple clusters) | Future |
 
 ---
 
-## 使用方式
+## 🔗 Related
 
-### 启动
-```bash
-# 1. 启动 Bridge Server
-cd /home/shidu10/ClawSquad/claw-squad-cli
-node bridge-server.cjs --port=9876
-
-# 2. MCP Bridge (通过 OpenClaw 自动调用)
-# 不需要手动启动，由 OpenClaw 管理
-```
-
-### 通过 OpenClaw 使用
-```
-用户: "用 ClawSquad 实现 REST API"
-
-OpenClaw → MCP Bridge:
-  coordinate_team({
-    task: "实现 REST API",
-    roles: ["architect", "coder", "reviewer", "guardian"]
-  })
-
-MCP Bridge:
-  → 自动 spawn architect-1 (Claude)
-  → 自动 spawn coder-1 (Claude)
-  → 自动 spawn reviewer-1 (Claude)
-  → 自动 spawn guardian-1 (Claude)
-  → 通过 Bridge Server 分发任务
-```
+- [OpenClaw](https://github.com/openclaw/openclaw)
+- [ClawHub](https://clawhub.ai)
