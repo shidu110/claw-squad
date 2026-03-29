@@ -48,6 +48,31 @@ function parseArgs() {
 const { host, port } = parseArgs();
 
 // ====================
+// Metrics (Prometheus-style)
+// ====================
+const metrics = {
+  tasksReceived: 0,
+  tasksCompleted: 0,
+  tasksFailed: 0,
+  workersSpawned: 0,
+  workersKilled: 0,
+  requestsPending: 0,
+  requestsTimedOut: 0,
+  reconnectAttempts: 0,
+  startTime: Date.now()
+};
+
+function getMetrics() {
+  return {
+    ...metrics,
+    uptime: Date.now() - metrics.startTime,
+    workersActive: Array.from(spawnedWorkers.values()).filter(w => w.status === 'busy').length,
+    workersIdle: Array.from(spawnedWorkers.values()).filter(w => w.status === 'idle' || w.status === 'pooled').length,
+    poolSize: Array.from(workerPool.values()).reduce((sum, q) => sum + q.length, 0)
+  };
+}
+
+// ====================
 // Session 管理
 // ====================
 
@@ -510,6 +535,7 @@ function scheduleReconnect() {
   }
   const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY);
   reconnectAttempts++;
+  metrics.reconnectAttempts++;
   log(`Scheduling reconnect in ${delay}ms (attempt ${reconnectAttempts})`);
   setTimeout(() => {
     connectToBridge().catch(() => {});
@@ -803,6 +829,14 @@ function getTools() {
       }
     },
     {
+      name: 'get_metrics',
+      description: '获取 ClawSquad 运行指标 (Prometheus-style)',
+      inputSchema: {
+        type: 'object',
+        properties: {}
+      }
+    },
+    {
       name: 'start_debate',
       description: '启动辩论会议',
       inputSchema: {
@@ -987,6 +1021,25 @@ function handleToolCall(id, params, progressToken) {
       });
       sendMCPResult(id, { 
         content: [{ type: 'text', text: `Debate started: ${args.topic}` }]
+      });
+      break;
+    }
+
+    case 'get_metrics': {
+      const m = getMetrics();
+      const lines = [
+        '=== ClawSquad Metrics ===',
+        `Uptime: ${Math.floor(m.uptime / 1000)}s`,
+        `Tasks: ${m.tasksCompleted} completed, ${m.tasksFailed} failed`,
+        `Workers: ${m.workersSpawned} spawned, ${m.workersKilled} killed`,
+        `Active: ${m.workersActive} busy, ${m.workersIdle} idle`,
+        `Pool: ${m.poolSize} pooled workers`,
+        `Pending: ${m.requestsPending} requests`,
+        `Timeouts: ${m.requestsTimedOut} timed out`,
+        `Reconnects: ${m.reconnectAttempts} attempts`
+      ];
+      sendMCPResult(id, {
+        content: [{ type: 'text', text: lines.join('\n') }]
       });
       break;
     }
