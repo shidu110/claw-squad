@@ -328,7 +328,9 @@ export ANTHROPIC_API_KEY="your-anthropic-api-key"
 
 ### CLI Tools Setup
 
-#### Claude CLI (Recommended)
+ClawSquad works with multiple AI CLI tools. Install based on your preference:
+
+#### Claude CLI (Recommended) ✅
 
 ```bash
 npm install -g @anthropic-ai/claude-code
@@ -344,6 +346,32 @@ npm install -g @openai/codex@0.57.0
 
 ```bash
 npm install -g @google/gemini-cli
+```
+
+#### OpenCode (Optional - Easy Alternative) ⭐
+
+> **Note:** If Codex CLI configuration is inconvenient, you can use **OpenCode** or other CLI tools as alternatives. ClawSquad's role-based architecture allows flexible CLI substitution.
+
+```bash
+# OpenCode - Simple alternative
+npm install -g opencode-cli
+
+# Any CLI that supports --print mode can be integrated
+```
+
+**Custom CLI Integration:**
+
+Edit `claw-squad-core/role-config.ts` to add your preferred CLI:
+
+```typescript
+export const CLI_CONFIG: Record<string, CLIConfig> = {
+  opencode: {
+    type: 'opencode',
+    command: 'opencode',
+    args: ['--print', '--no-interactive'],
+    supportedModels: ['*']
+  }
+}
 ```
 
 ### Multi-Bridge Cluster
