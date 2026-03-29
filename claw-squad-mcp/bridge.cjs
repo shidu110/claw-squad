@@ -179,25 +179,68 @@ class SessionStorage {
 const sessionStorage = new SessionStorage();
 
 // ====================
-// Worker 管理 (自动 spawn)
+// Worker 管理 (自动 spawn) + 多模型支持
 // ====================
 
+// CLI 配置 (支持多种大模型)
+// 每个 CLI 类型可以配置使用不同的模型
 const CLI_CONFIGS = {
+  // Claude CLI - MiniMax (默认)
+  'claude-minimax': {
+    command: 'claude',
+    args: ['--print', '--permission-mode', 'bypassPermissions', '--model', 'MiniMax-M2.7'],
+    apiKeyEnv: 'ANTHROPIC_API_KEY',
+    model: 'MiniMax-M2.7'
+  },
+  // Claude CLI - Kimi K2.5 (256k 上下文)
+  'claude-kimi': {
+    command: 'claude',
+    args: ['--print', '--permission-mode', 'bypassPermissions'],
+    env: { ANTHROPIC_API_KEY: 'sk-dxnsxyfhiksvfsibytbrurcvlehmalgkohcmirvgjlymyspd' },
+    model: 'Kimi-K2.5'
+  },
+  // Claude CLI - GLM-5 (深度执行)
+  'claude-glm': {
+    command: 'claude',
+    args: ['--print', '--permission-mode', 'bypassPermissions'],
+    env: { ANTHROPIC_API_KEY: 'sk-cvivauojemdaqukyfpeqdjenekgsdiouztcjovtcuvpvkveu' },
+    model: 'GLM-5'
+  },
+  // Codex CLI - Kimi (并行任务)
+  'codex-kimi': {
+    command: 'codex',
+    args: ['--full-auto'],
+    env: { OPENAI_API_KEY: 'sk-dxnsxyfhiksvfsibytbrurcvlehmalgkohcmirvgjlymyspd' },
+    model: 'Kimi-K2.5'
+  },
+  // Codex CLI - GLM (工程任务)
+  'codex-glm': {
+    command: 'codex',
+    args: ['--full-auto'],
+    env: { OPENAI_API_KEY: 'sk-cvivauojemdaqukyfpeqdjenekgsdiouztcjovtcuvpvkveu' },
+    model: 'GLM-5'
+  },
+  // 默认 Claude
   claude: {
     command: 'claude',
     args: ['--print', '--permission-mode', 'bypassPermissions'],
-    apiKeyEnv: 'ANTHROPIC_API_KEY'
+    apiKeyEnv: 'ANTHROPIC_API_KEY',
+    model: 'MiniMax-M2.7'
   },
+  // 默认 Codex
   codex: {
     command: 'codex',
     args: ['--full-auto'],
-    apiKeyEnv: 'OPENAI_API_KEY'
+    apiKeyEnv: 'OPENAI_API_KEY',
+    model: 'MiniMax-M2.7'
   },
+  // OpenCode
   opencode: {
     command: 'opencode',
     args: ['run'],
     apiKeyEnv: 'OPENAI_API_KEY'
   },
+  // Gemini
   gemini: {
     command: 'gemini',
     args: [],
@@ -205,34 +248,53 @@ const CLI_CONFIGS = {
   }
 };
 
-// Worker 角色默认映射
+// Worker 角色默认映射 (角色 → CLI 类型)
 const ROLE_CLI_MAP = {
-  architect: 'claude',
-  coder: 'claude',
-  'coder-alt': 'codex',
-  debugger: 'claude',
-  devops: 'claude',
-  security: 'claude',
-  performance: 'claude',
-  researcher: 'gemini',
-  analyst: 'claude',
-  planner: 'claude',
-  advisor: 'claude',
-  reviewer: 'claude',
-  tester: 'codex',
-  qa: 'claude',
-  'tech-writer': 'claude',
-  pm: 'claude',
-  critic: 'claude',
-  'devils-advocate': 'claude',
-  optimist: 'claude',
-  pessimist: 'claude',
-  synthesizer: 'claude',
-  facilitator: 'claude',
-  guardian: 'claude',
+  // 架构师 - 使用 GLM-5 (复杂推理)
+  architect: 'claude-glm',
+  
+  // 编码 - 根据任务复杂度选择
+  coder: 'claude-glm',        // 复杂工程 → GLM-5
+  'coder-fast': 'claude-minimax', // 快速任务 → MiniMax
+  
+  // 审查 - 使用 Kimi (并行多任务)
+  reviewer: 'claude-kimi',
+  
+  // 测试 - Codex Kimi (并行测试)
+  tester: 'codex-kimi',
+  
+  // 研究员 - Kimi (256k 上下文 + 并行)
+  researcher: 'claude-kimi',
+  
+  // 调试 - GLM-5 (深度分析)
+  debugger: 'claude-glm',
+  
+  // DevOps - Kimi (快速执行)
+  devops: 'claude-kimi',
+  
+  // 安全 - GLM-5 (深度分析)
+  security: 'claude-glm',
+  
+  // 性能优化 - GLM-5
+  performance: 'claude-glm',
+  
+  // 其他角色 - 默认 MiniMax
+  analyst: 'claude-minimax',
+  planner: 'claude-minimax',
+  advisor: 'claude-minimax',
+  qa: 'claude-minimax',
+  'tech-writer': 'claude-minimax',
+  pm: 'claude-minimax',
+  critic: 'claude-kimi',
+  'devils-advocate': 'claude-kimi',
+  optimist: 'claude-minimax',
+  pessimist: 'claude-minimax',
+  synthesizer: 'claude-glm',
+  facilitator: 'claude-kimi',
+  guardian: 'claude-glm',
   utility: 'opencode',
-  explorer: 'claude',
-  refactorer: 'claude'
+  explorer: 'claude-kimi',
+  refactorer: 'claude-glm'
 };
 
 // ====================
@@ -312,9 +374,15 @@ function spawnWorker(role, cliType, teamName = 'default') {
   }
   
   // 回退到 subprocess
+  // 构建环境变量 (支持 env 覆盖)
+  const spawnEnv = { ...process.env };
+  if (cli.env) {
+    Object.assign(spawnEnv, cli.env);
+  }
+  
   const proc = spawn(cli.command, cli.args, {
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env },
+    env: spawnEnv,
     detached: false
   });
   
