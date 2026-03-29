@@ -18,9 +18,19 @@ const readline = require('readline');
 const { randomUUID } = require('crypto');
 const { spawn } = require('child_process');
 
-// 默认配置
+// ====================
+// 常量配置
+// ====================
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 9876;
+
+// 超时配置 (ms)
+const REQUEST_TIMEOUT = 60000;
+const CLEANUP_INTERVAL = 30000;
+const RECONNECT_TIMEOUT = 5000;
+const WORKER_TIMEOUT = 3000;
+
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 // 解析命令行参数
 function parseArgs() {
@@ -395,7 +405,6 @@ const progressCallbacks = new Map();
 // ====================
 // Pending Request 超时清理
 // ====================
-const REQUEST_TIMEOUT = 60000;
 
 setInterval(() => {
   const now = Date.now();
@@ -406,7 +415,7 @@ setInterval(() => {
       progressCallbacks.delete(id);
     }
   }
-}, 30000);
+}, CLEANUP_INTERVAL);
 
 // 日志
 function log(...args) {
@@ -417,10 +426,10 @@ function log(...args) {
 // Bridge Server 自动重连
 // ====================
 let reconnectAttempts = 0;
-const MAX_RECONNECT_DELAY = 30000;
+
 
 function scheduleReconnect() {
-  if (reconnectAttempts > 10) {
+  if (reconnectAttempts > MAX_RECONNECT_ATTEMPTS) {
     log('Max reconnect attempts reached, giving up');
     return;
   }
