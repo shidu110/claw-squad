@@ -69,7 +69,7 @@
 
 ---
 
-## 🤖 Role → Model Mapping (26 roles)
+## 🤖 Role → Model Mapping (25 roles)
 
 ### 🔧 Engineering (8)
 | Role | CLI | Model | Rationale |
@@ -111,11 +111,12 @@
 | **facilitator** | claude-glm | GLM-5 | Meeting moderation |
 | **guardian** | claude-glm | GLM-5 | Boundary checking (auto-added) |
 
-### 🛠️ Utility (2)
+### 🛠️ Utility (1)
 | Role | CLI | Model | Rationale |
 |------|-----|-------|-----------|
-| **utility** | opencode | default | General-purpose tools |
 | **explorer** | claude-kimi | Kimi-K2.5 | Code exploration |
+
+> **Note:** The `utility` role is reserved for future tool integrations.
 
 ---
 
