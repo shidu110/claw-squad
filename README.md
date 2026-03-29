@@ -72,49 +72,49 @@
 ## 🤖 Role → Model Mapping (25 roles)
 
 ### 🔧 Engineering (8)
-| Role | CLI | Model | Rationale |
+| Role | Default CLI | Rationale |
 |------|-----|-------|-----------|
-| **architect** | claude-glm | GLM-5 | Complex reasoning, long-horizon planning |
-| **coder** | claude-glm | GLM-5 | Engineering-grade code generation |
-| **coder-alt** | codex-kimi | Kimi-K2.5 | Alternative model for diverse solutions |
-| **debugger** | claude-glm | GLM-5 | Deep analysis, terminal tools |
-| **devops** | claude-kimi | Kimi-K2.5 | Fast execution, parallel ops |
-| **security** | claude-glm | GLM-5 | Deep security analysis |
-| **performance** | claude-glm | GLM-5 | Deep optimization analysis |
-| **refactorer** | claude-glm | GLM-5 | Code quality and restructuring |
+| **architect** | claude | Complex reasoning, long-horizon planning |
+| **coder** | claude | Engineering-grade code generation |
+| **coder-alt** | codex | Alternative model for diverse solutions |
+| **debugger** | claude | Deep analysis, terminal tools |
+| **devops** | claude | Fast execution, parallel ops |
+| **security** | claude | Deep security analysis |
+| **performance** | claude | Deep optimization analysis |
+| **refactorer** | claude | Code quality and restructuring |
 
 ### 🔬 Research & Analysis (4)
-| Role | CLI | Model | Rationale |
+| Role | Default CLI | Rationale |
 |------|-----|-------|-----------|
-| **researcher** | claude-kimi | Kimi-K2.5 | 256k context, parallel scraping |
-| **analyst** | claude-glm | GLM-5 | Data analysis and insights |
-| **planner** | claude-kimi | Kimi-K2.5 | Task planning and scheduling |
-| **advisor** | claude-glm | GLM-5 | Strategic recommendations |
+| **researcher** | gemini | 256k context, parallel scraping |
+| **analyst** | claude | Data analysis and insights |
+| **planner** | claude | Task planning and scheduling |
+| **advisor** | claude | Strategic recommendations |
 
 ### ✅ Quality & Process (5)
-| Role | CLI | Model | Rationale |
+| Role | Default CLI | Rationale |
 |------|-----|-------|-----------|
-| **reviewer** | claude-kimi | Kimi-K2.5 | Code quality and review (auto-added) |
-| **tester** | codex-kimi | Kimi-K2.5 | Test generation |
-| **qa** | claude-kimi | Kimi-K2.5 | Quality assurance |
-| **tech-writer** | claude-kimi | Kimi-K2.5 | Documentation |
-| **pm** | claude-kimi | Kimi-K2.5 | Product management |
+| **reviewer** | claude | Code quality and review (auto-added) |
+| **tester** | codex | Test generation |
+| **qa** | claude | Quality assurance |
+| **tech-writer** | claude | Documentation |
+| **pm** | claude | Product management |
 
 ### 🎭 Meta & Debate (7) ← 特色
-| Role | CLI | Model | Rationale |
+| Role | Default CLI | Rationale |
 |------|-----|-------|-----------|
-| **critic** | claude-glm | GLM-5 | Challenges assumptions |
-| **devils-advocate** | claude-glm | GLM-5 | Argues against consensus |
-| **optimist** | claude-kimi | Kimi-K2.5 | Focuses on benefits |
-| **pessimist** | claude-kimi | Kimi-K2.5 | Focuses on risks |
-| **synthesizer** | claude-glm | GLM-5 | Integrates perspectives |
-| **facilitator** | claude-glm | GLM-5 | Meeting moderation |
-| **guardian** | claude-glm | GLM-5 | Boundary checking (auto-added) |
+| **critic** | claude | Challenges assumptions |
+| **devils-advocate** | claude | Argues against consensus |
+| **optimist** | claude | Focuses on benefits |
+| **pessimist** | claude | Focuses on risks |
+| **synthesizer** | claude | Integrates perspectives |
+| **facilitator** | claude | Meeting moderation |
+| **guardian** | claude | Boundary checking (auto-added) |
 
 ### 🛠️ Utility (1)
-| Role | CLI | Model | Rationale |
+| Role | Default CLI | Rationale |
 |------|-----|-------|-----------|
-| **explorer** | claude-kimi | Kimi-K2.5 | Code exploration |
+| **explorer** | claude | Code exploration |
 
 > **Note:** The `utility` role is reserved for future tool integrations.
 
