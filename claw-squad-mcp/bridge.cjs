@@ -210,6 +210,18 @@ const ROLE_CLI_MAP = {
   refactorer: 'claude'
 };
 
+// ====================
+// Worker Pool 配置 (预启动空闲 Worker)
+// ====================
+const WORKER_POOL_CONFIG = {
+  enabled: process.env.CLAWSQUAD_POOL === '1',
+  minIdle: parseInt(process.env.CLAWSQUAD_POOL_MIN) || 1,  // 每个角色最少空闲数
+  maxIdle: parseInt(process.env.CLAWSQUAD_POOL_MAX) || 3   // 每个角色最大空闲数
+};
+
+// Worker 池 (角色 → idle worker 队列)
+const workerPool = new Map();  // role → Queue<workerId>
+
 // 在 spawnWorker 时检查，而不是模块加载时
 let tmuxBackend = null;
 
@@ -327,20 +339,83 @@ function spawnWorker(role, cliType, teamName = 'default') {
 }
 
 /**
- * 获取或创建 Worker
+ * 获取或创建 Worker (优先从池中取)
  */
 function getOrCreateWorker(role) {
   const cliType = ROLE_CLI_MAP[role] || 'claude';
   
-  // 检查是否有现成的空闲 Worker
+  // 1. 尝试从池中获取 idle worker
+  if (WORKER_POOL_CONFIG.enabled && workerPool.has(role)) {
+    const pool = workerPool.get(role);
+    if (pool.length > 0) {
+      const workerId = pool.shift();
+      const worker = spawnedWorkers.get(workerId);
+      if (worker && worker.status !== 'dead') {
+        worker.status = 'idle';
+        log(`Pool: reusing worker ${workerId} for role ${role}`);
+        return workerId;
+      }
+    }
+  }
+  
+  // 2. 检查是否有现成的空闲 Worker (非池化)
   for (const [workerId, worker] of spawnedWorkers) {
-    if (worker.role === role && worker.status !== 'busy') {
+    if (worker.role === role && worker.status !== 'busy' && worker.status !== 'dead') {
       return workerId;
     }
   }
   
-  // Spawn 新的 Worker
+  // 3. Spawn 新的 Worker
   return spawnWorker(role, cliType);
+}
+
+/**
+ * 将 Worker 归还到池中 (如果池未满)
+ */
+function returnToPool(workerId, role) {
+  if (!WORKER_POOL_CONFIG.enabled) return;
+  
+  if (!workerPool.has(role)) {
+    workerPool.set(role, []);
+  }
+  
+  const pool = workerPool.get(role);
+  if (pool.length < WORKER_POOL_CONFIG.maxIdle) {
+    const worker = spawnedWorkers.get(workerId);
+    if (worker) {
+      pool.push(workerId);
+      worker.status = 'pooled';
+      log(`Pool: stored worker ${workerId} for role ${role} (pool size: ${pool.length})`);
+    }
+  }
+}
+
+/**
+ * 初始化 Worker 池 (预热)
+ */
+function initWorkerPool() {
+  if (!WORKER_POOL_CONFIG.enabled) {
+    log('Worker pool disabled (set CLAWSQUAD_POOL=1 to enable)');
+    return;
+  }
+  
+  log(`Initializing worker pool (minIdle: ${WORKER_POOL_CONFIG.minIdle}, maxIdle: ${WORKER_POOL_CONFIG.maxIdle})`);
+  
+  // 预热常见角色
+  const warmupRoles = ['coder', 'reviewer', 'architect'];
+  
+  for (const role of warmupRoles) {
+    for (let i = 0; i < WORKER_POOL_CONFIG.minIdle; i++) {
+      const workerId = spawnWorker(role, ROLE_CLI_MAP[role] || 'claude');
+      // Mark as pooled immediately
+      const worker = spawnedWorkers.get(workerId);
+      if (worker) {
+        worker.status = 'pooled';
+      }
+    }
+    workerPool.set(role, []);
+    log(`Pool: pre-spawned ${WORKER_POOL_CONFIG.minIdle} workers for role ${role}`);
+  }
 }
 
 /**
@@ -1160,23 +1235,71 @@ async function main() {
       process.exit(0);
     });
 
-    process.on('uncaughtException', (e) => {
-      log('Uncaught:', e.message);
-      if (process.env.CLAWSQUAD_TMUX !== '1') {
-        killAllWorkers();
-      }
-    });
-    
-    process.on('SIGINT', () => {
-      log('SIGINT received, cleaning up...');
-      if (process.env.CLAWSQUAD_TMUX !== '1') {
-        killAllWorkers();
-      } else {
-        spawnedWorkers.clear();
-      }
-      if (bridgeSocket) bridgeSocket.destroy();
-      process.exit(0);
-    });
+// ====================
+// Graceful Shutdown
+// ====================
+let isShuttingDown = false;
+
+async function gracefulShutdown(signal) {
+  if (isShuttingDown) {
+    log('Already shutting down, ignoring', signal);
+    return;
+  }
+  isShuttingDown = true;
+  
+  log(`Graceful shutdown initiated (${signal})`);
+  
+  // 1. 停止接受新连接
+  bridgeReady = false;
+  
+  // 2. 通知 Bridge Server 准备关闭
+  if (bridgeSocket && !bridgeSocket.destroyed) {
+    sendToBridge({ type: 'ceo:shutdown', signal });
+  }
+  
+  // 3. 等待活跃任务完成 (最多 10s)
+  const activeTasks = Array.from(spawnedWorkers.entries())
+    .filter(([_, w]) => w.status === 'busy');
+  
+  if (activeTasks.length > 0) {
+    log(`Waiting for ${activeTasks.length} active workers to complete...`);
+    await new Promise(resolve => setTimeout(resolve, 10000));
+  }
+  
+  // 4. Kill 所有 Worker
+  if (process.env.CLAWSQUAD_TMUX !== '1') {
+    killAllWorkers();
+  } else {
+    // tmux mode: 保留 session，只清理内存
+    spawnedWorkers.clear();
+    log('Tmux mode: workers preserved in tmux session');
+  }
+  
+  // 5. 关闭 Bridge 连接
+  if (bridgeSocket) {
+    bridgeSocket.destroy();
+  }
+  
+  // 6. 清理资源
+  pendingRequests.clear();
+  pendingRequestCreatedAt.clear();
+  progressCallbacks.clear();
+  
+  log('Graceful shutdown complete');
+  process.exit(0);
+}
+
+process.on('uncaughtException', (e) => {
+  log('Uncaught:', e.message);
+  gracefulShutdown('uncaught');
+});
+
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+
+process.on('exit', (code) => {
+  log(`Process exiting with code ${code}`);
+});
 
   } catch (err) {
     log('Failed to start:', err.message);
