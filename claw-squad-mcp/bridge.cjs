@@ -200,18 +200,70 @@ const ROLE_CLI_MAP = {
   refactorer: 'claude'
 };
 
-const spawnedWorkers = new Map();  // workerId → { cli, process, role }
+// 在 spawnWorker 时检查，而不是模块加载时
+let tmuxBackend = null;
+
+const spawnedWorkers = new Map();  // workerId → { cli, process, role, tmuxSession?, tmuxWindow? }
+const tmuxSessions = new Map();   // teamName → sessionName (复用 session)
 let workerIdCounter = 0;
+
+// 延迟加载 tmux backend
+function getTmuxBackend() {
+  if (!tmuxBackend) {
+    try {
+      tmuxBackend = require('../claw-squad-cli/tmux-backend.cjs');
+      log('Tmux backend loaded');
+    } catch (e) {
+      log('Tmux backend not available:', e.message);
+    }
+  }
+  return tmuxBackend;
+}
 
 /**
  * 自动 Spawn Worker
+ * 
+ * @param {string} role - Worker 角色
+ * @param {string} cliType - CLI 类型 (claude/codex/gemini/opencode)
+ * @param {string} teamName - Team 名称 (用于 tmux session)
  */
-function spawnWorker(role, cliType) {
+function spawnWorker(role, cliType, teamName = 'default') {
   const cli = CLI_CONFIGS[cliType] || CLI_CONFIGS.claude;
   const workerId = `${role}-${++workerIdCounter}`;
   
   log(`Spawning worker ${workerId} (${cliType}) for role ${role}`);
   
+  // 优先使用 tmux backend
+  if (process.env.CLAWSQUAD_TMUX === '1') {
+    const backend = getTmuxBackend();
+    if (backend) {
+      try {
+        // 使用 getOrCreateSession 复用现有 session
+        const sessionName = backend.getOrCreateSession(teamName);
+        
+        // Spawn 到 tmux window
+        backend.spawnWorker(sessionName, workerId, role, cli.command, cli.args);
+        
+        const workerInfo = {
+          id: workerId,
+          role,
+          cli: cliType,
+          tmuxSession: sessionName,
+          tmuxWindow: workerId,
+          startedAt: Date.now()
+        };
+        
+        spawnedWorkers.set(workerId, workerInfo);
+        
+        log(`Worker ${workerId} spawned in tmux session ${sessionName}`);
+        return workerId;
+      } catch (e) {
+        log(`Tmux spawn failed, falling back to subprocess: ${e.message}`);
+      }
+    }
+  }
+  
+  // 回退到 subprocess
   const proc = spawn(cli.command, cli.args, {
     stdio: ['pipe', 'pipe', 'pipe'],
     env: { ...process.env },
@@ -295,11 +347,35 @@ function getSpawnedWorkers() {
  * Kill 所有 Worker
  */
 function killAllWorkers() {
+  const tmuxBackend = getTmuxBackend();
+  
   for (const [workerId, worker] of spawnedWorkers) {
     log(`Killing worker ${workerId}`);
-    worker.process?.kill('SIGTERM');
+    
+    if (worker.tmuxSession && tmuxBackend) {
+      // tmux worker - kill window
+      try {
+        tmuxBackend.killWorker(workerId);
+      } catch (e) {
+        log(`Tmux kill error: ${e.message}`);
+      }
+    } else if (worker.process) {
+      // subprocess worker
+      worker.process.kill('SIGTERM');
+    }
   }
   spawnedWorkers.clear();
+  tmuxSessions.clear();
+  
+  // 清理 tmux sessions
+  if (tmuxBackend) {
+    try {
+      tmuxBackend.cleanup();
+      log('Tmux sessions cleaned up');
+    } catch (e) {
+      // ignore
+    }
+  }
 }
 
 // ====================
@@ -1019,19 +1095,32 @@ async function main() {
 
     process.stdin.on('close', () => {
       log('Stdin closed, exiting');
-      killAllWorkers();
+      // TMUX 模式下保留 workers，只清理 subprocess workers
+      if (process.env.CLAWSQUAD_TMUX !== '1') {
+        killAllWorkers();
+      } else {
+        // tmux 模式下 workers 继续运行在 tmux session 中
+        log('Workers running in tmux - attach with: tmux attach-session -t <session>');
+        spawnedWorkers.clear(); // 只清理内存中的引用，不杀进程
+      }
       if (bridgeSocket) bridgeSocket.destroy();
       process.exit(0);
     });
 
     process.on('uncaughtException', (e) => {
       log('Uncaught:', e.message);
-      killAllWorkers();
+      if (process.env.CLAWSQUAD_TMUX !== '1') {
+        killAllWorkers();
+      }
     });
     
     process.on('SIGINT', () => {
       log('SIGINT received, cleaning up...');
-      killAllWorkers();
+      if (process.env.CLAWSQUAD_TMUX !== '1') {
+        killAllWorkers();
+      } else {
+        spawnedWorkers.clear();
+      }
       if (bridgeSocket) bridgeSocket.destroy();
       process.exit(0);
     });
