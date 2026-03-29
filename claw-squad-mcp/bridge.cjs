@@ -196,28 +196,28 @@ const CLI_CONFIGS = {
   'claude-kimi': {
     command: 'claude',
     args: ['--print', '--permission-mode', 'bypassPermissions'],
-    env: { ANTHROPIC_API_KEY: 'sk-dxnsxyfhiksvfsibytbrurcvlehmalgkohcmirvgjlymyspd' },
+    env: { ANTHROPIC_API_KEY: process.env.SILICONFLOW_KIMI_API_KEY || 'sk-dxnsxyfhiksvfsibytbrurcvlehmalgkohcmirvgjlymyspd' },
     model: 'Kimi-K2.5'
   },
   // Claude CLI - GLM-5 (深度执行)
   'claude-glm': {
     command: 'claude',
     args: ['--print', '--permission-mode', 'bypassPermissions'],
-    env: { ANTHROPIC_API_KEY: 'sk-cvivauojemdaqukyfpeqdjenekgsdiouztcjovtcuvpvkveu' },
+    env: { ANTHROPIC_API_KEY: process.env.SILICONFLOW_GLM_API_KEY || 'sk-cvivauojemdaqukyfpeqdjenekgsdiouztcjovtcuvpvkveu' },
     model: 'GLM-5'
   },
   // Codex CLI - Kimi (并行任务)
   'codex-kimi': {
     command: 'codex',
     args: ['--full-auto'],
-    env: { OPENAI_API_KEY: 'sk-dxnsxyfhiksvfsibytbrurcvlehmalgkohcmirvgjlymyspd' },
+    env: { OPENAI_API_KEY: process.env.SILICONFLOW_KIMI_API_KEY || 'sk-dxnsxyfhiksvfsibytbrurcvlehmalgkohcmirvgjlymyspd' },
     model: 'Kimi-K2.5'
   },
   // Codex CLI - GLM (工程任务)
   'codex-glm': {
     command: 'codex',
     args: ['--full-auto'],
-    env: { OPENAI_API_KEY: 'sk-cvivauojemdaqukyfpeqdjenekgsdiouztcjovtcuvpvkveu' },
+    env: { OPENAI_API_KEY: process.env.SILICONFLOW_GLM_API_KEY || 'sk-cvivauojemdaqukyfpeqdjenekgsdiouztcjovtcuvpvkveu' },
     model: 'GLM-5'
   },
   // 默认 Claude
