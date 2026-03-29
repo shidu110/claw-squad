@@ -2,10 +2,19 @@
 
 > Multi-Agent AI Worker Orchestration Framework
 
-**ClawSquad** enables parallel coordination of multiple AI workers (Claude Code, Codex, etc.) for complex software engineering tasks. It provides intelligent task routing, role-based specialization, and visual monitoring via tmux.
+**ClawSquad** enables parallel coordination of multiple AI workers (Claude Code, Codex, Gemini CLI, etc.) for complex software engineering tasks. It provides intelligent task routing, role-based specialization, and visual monitoring via tmux.
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Node.js >=18](https://img.shields.io/badge/Node.js->=18-green.svg)](https://nodejs.org/)
+[![tmux](https://img.shields.io/badge/tmux-ready-blue.svg)](https://github.com/tmux/tmux)
+[![Multi-Agent](https://img.shields.io/badge/Multi--Agent-Orchestration-purple.svg)](https://arxiv.org/abs/2401.12345)
+
+**Key Features:**
+- 🤖 25+ specialized AI roles
+- 🖥️ Multi-CLI support (Claude/Codex/Gemini)
+- 📊 Real-time tmux visualization
+- 🔄 Auto role assignment
+- 🎯 Debate meeting mode
 
 ---
 
@@ -187,9 +196,34 @@ Every task follows this mandatory flow:
 ### 1. Installation
 
 ```bash
-git clone https://github.com/clawsquad/claw-squad.git
+git clone https://github.com/shidu110/claw-squad.git
 cd claw-squad
 npm install
+```
+
+### 2. Prerequisites
+
+| Requirement | Version | Description |
+|------------|---------|-------------|
+| Node.js | 18+ | JavaScript runtime |
+| npm | 10+ | Package manager |
+| tmux | 3.0+ | Terminal multiplexer (optional, for visual mode) |
+
+#### Install tmux (optional):
+
+**Ubuntu/Debian:**
+```bash
+sudo apt update && sudo apt install tmux
+```
+
+**macOS:**
+```bash
+brew install tmux
+```
+
+**Windows (WSL2):**
+```bash
+sudo apt install tmux
 ```
 
 ### 2. Start Bridge Server
@@ -267,6 +301,51 @@ Workers will spawn in tmux windows for real-time monitoring.
 | `BRIDGE_HOST` | `127.0.0.1` | Bridge Server host |
 | `BRIDGE_PORT` | `9876` | Bridge Server port |
 
+### Model Provider Configuration
+
+ClawSquad supports multiple AI model providers. Configure your preferred provider:
+
+#### MiniMax (Recommended for Chinese models)
+
+```bash
+# Set your MiniMax API key
+export MINIMAX_API_KEY="your-minimax-api-key"
+```
+
+#### SiliconFlow (Alternative)
+
+```bash
+# Set your SiliconFlow API key
+export SILICONFLOW_API_KEY="your-siliconflow-api-key"
+```
+
+#### Anthropic (Claude)
+
+```bash
+# Set your Anthropic API key
+export ANTHROPIC_API_KEY="your-anthropic-api-key"
+```
+
+### CLI Tools Setup
+
+#### Claude CLI (Recommended)
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+#### Codex CLI (Optional)
+
+```bash
+npm install -g @openai/codex@0.57.0
+```
+
+#### Gemini CLI (Optional)
+
+```bash
+npm install -g @google/gemini-cli
+```
+
 ### Multi-Bridge Cluster
 
 ```bash
@@ -298,6 +377,127 @@ Reconnects: 0 attempts
 # Run stress test
 node stress-test.cjs
 ```
+
+---
+
+## 🔍 Troubleshooting
+
+### Bridge Server Won't Start
+
+```
+Error: port already in use
+```
+
+**Solution:**
+```bash
+# Find and kill existing process
+lsof -i :9876 | grep LISTEN
+kill <PID>
+```
+
+### tmux Mode Not Creating Windows
+
+```
+Error: tmux: unknown command
+```
+
+**Solution:**
+```bash
+# Install tmux
+sudo apt install tmux
+
+# Or set sudo permissions for tmux
+echo 'shidu10 ALL=(ALL) NOPASSWD: /usr/bin/tmux' | sudo tee /etc/sudoers.d/shidu10-tmux
+```
+
+### API Key Not Found
+
+```
+Error: MINIMAX_API_KEY is not set
+```
+
+**Solution:**
+```bash
+# Add to your shell profile (~/.bashrc or ~/.zshrc)
+export MINIMAX_API_KEY="your-api-key"
+
+# Reload profile
+source ~/.bashrc
+```
+
+### Worker Spawn Fails
+
+```
+Error: Worker exited with code 1
+```
+
+**Solution:**
+- Check if the CLI tool (claude/codex/gemini) is installed
+- Verify API key is valid
+- Check worker logs in tmux windows
+
+### Memory Issues
+
+If workers are consuming too much memory:
+
+```bash
+# Enable worker pool for reuse
+export CLAWSQUAD_POOL=1
+export CLAWSQUAD_POOL_MAX=2
+```
+
+---
+
+## 💡 Example Use Cases
+
+### 1. Code Review Team
+
+```javascript
+// Spawn a review team
+coordinate_team({
+  roles: ['architect', 'reviewer', 'guardian'],
+  task: 'Review the new authentication module'
+})
+```
+
+### 2. Full-Stack Development
+
+```javascript
+// Backend + Frontend + QA
+coordinate_team({
+  roles: ['architect', 'coder', 'tester', 'reviewer'],
+  task: 'Implement user login feature'
+})
+```
+
+### 3. Bug Investigation
+
+```javascript
+// Debug team
+coordinate_team({
+  roles: ['debugger', 'security', 'reviewer'],
+  task: 'Investigate memory leak in production'
+})
+```
+
+### 4. Architecture Decision
+
+```javascript
+// Start a debate
+start_debate({
+  topic: 'Microservices vs Monolith',
+  participants: ['architect', 'critic', 'optimist', 'pessimist', 'synthesizer']
+})
+```
+
+---
+
+## 📈 Performance Tips
+
+1. **Use Worker Pool** - Pre-spawn idle workers for faster task startup
+2. **Enable tmux Mode** - Monitor worker activity in real-time
+3. **Set Appropriate Limits** - Don't spawn too many workers at once
+4. **Use Role Auto-Mapping** - Let the system infer optimal role combinations
 
 ---
 
@@ -342,11 +542,41 @@ claw-squad/
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing`)
-3. Commit your changes (`git commit -m 'feat: add amazing'`)
-4. Push to the branch (`git push origin feature/amazing`)
-5. Open a Pull Request
+Contributions are welcome! Here's how to get started:
+
+### Development Setup
+
+```bash
+# Fork and clone the repository
+git clone https://github.com/YOUR_USERNAME/claw-squad.git
+cd claw-squad
+
+# Install dependencies
+npm install
+
+# Create a feature branch
+git checkout -b feature/your-feature
+
+# Make your changes and test
+npm test
+
+# Commit and push
+git commit -m 'feat: add your feature'
+git push origin feature/your-feature
+```
+
+### Code Style
+
+- Use ESLint for linting
+- Follow existing code conventions
+- Add tests for new features
+- Update documentation
+
+### Reporting Issues
+
+- Check existing issues before creating new ones
+- Provide reproduction steps
+- Include system information (OS, Node.js version, etc.)
 
 ---
 
@@ -356,10 +586,28 @@ MIT License - see [LICENSE](LICENSE) file
 
 ---
 
-## 🔗 Related
+## 🔗 Related Projects
 
 - [OpenClaw](https://github.com/openclaw/openclaw) - The AI agent platform ClawSquad runs on
-- [Absorbi](https://github.com/your-repo/absorbi) - Self-evolving AI framework
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) - Primary CLI for coding agents
+- [OpenAI Codex](https://platform.openai.com/docs/codex) - Code generation CLI
+- [Superpowers](https://github.com/obra/superpowers) - Claude Code skills framework
+- [oh-my-claudecode](https://github.com/Yeachan-Heo/oh-my-claudecode) - Multi-agent orchestration for Claude Code
+
+---
+
+## 🌍 Ecosystem
+
+```
+ClawSquad (Multi-Agent Orchestration)
+    ├── OpenClaw (Agent Platform)
+    │   ├── MCP Protocol
+    │   └── Multi-Model Support
+    ├── Claude Code / Codex / Gemini CLI
+    │   └── Skills & Plugins
+    └── SiliconFlow / MiniMax / Anthropic
+        └── AI Model Providers
+```
 
 ---
 
