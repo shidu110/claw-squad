@@ -1,7 +1,8 @@
 /**
- * Bridge Cluster 配置示例
+ * Bridge Cluster Configuration
  * 
- * 定义多模型 Bridge 集群
+ * Copy this file to bridge-cluster-config.local.js and fill in your API keys.
+ * bridge-cluster-config.local.js is gitignored.
  */
 
 module.exports = {
@@ -20,7 +21,7 @@ module.exports = {
       cli: '../claw-squad-mcp/bridge.cjs',
       env: {
         CLAWSQUAD_MODEL: 'Kimi-K2.5',
-        CLAWSQUAD_API_KEY: 'sk-dxnsxyfhiksvfsibytbrurcvlehmalgkohcmirvgjlymyspd'
+        SILICONFLOW_KIMI_API_KEY: process.env.SILICONFLOW_KIMI_API_KEY || 'your-kimi-key'
       }
     },
     {
@@ -29,7 +30,7 @@ module.exports = {
       cli: '../claw-squad-mcp/bridge.cjs',
       env: {
         CLAWSQUAD_MODEL: 'GLM-5',
-        CLAWSQUAD_API_KEY: 'sk-cvivauojemdaqukyfpeqdjenekgsdiouztcjovtcuvpvkveu'
+        SILICONFLOW_GLM_API_KEY: process.env.SILICONFLOW_GLM_API_KEY || 'your-glm-key'
       }
     }
   ]

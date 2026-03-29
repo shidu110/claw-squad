@@ -38,3 +38,6 @@ temp/
 
 # Bridge cluster state
 .bridge-state.json
+
+# Local config (contains API keys)
+bridge-cluster-config.local.js
