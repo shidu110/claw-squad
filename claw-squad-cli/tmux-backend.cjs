@@ -69,8 +69,13 @@ function findExistingSession(teamName) {
   try {
     const sessions = listSessions();
     
+    // 首先检查精确匹配 "clawsquad" (主 session)
+    if (sessions.includes('clawsquad')) {
+      return 'clawsquad';
+    }
+    
+    // 然后检查 clawsquad-{teamName}-* 模式
     for (const session of sessions) {
-      // 检查是否是我们的 session 且匹配 teamName
       if (session.startsWith(`${SESSION_PREFIX}${teamName}`)) {
         return session;
       }
@@ -265,7 +270,7 @@ if (require.main === module) {
       const role = args[3] || 'unknown';
       const cli = args[4] || 'claude';
       
-      const sessionName = createSession(session);
+      const sessionName = getOrCreateSession(session);
       spawnWorker(sessionName, workerId, role, cli, args.slice(5));
       
       console.log(JSON.stringify({
