@@ -413,6 +413,25 @@ function log(...args) {
   console.error('[MCP-Bridge]', ...args);
 }
 
+// ====================
+// Bridge Server 自动重连
+// ====================
+let reconnectAttempts = 0;
+const MAX_RECONNECT_DELAY = 30000;
+
+function scheduleReconnect() {
+  if (reconnectAttempts > 10) {
+    log('Max reconnect attempts reached, giving up');
+    return;
+  }
+  const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), MAX_RECONNECT_DELAY);
+  reconnectAttempts++;
+  log(`Scheduling reconnect in ${delay}ms (attempt ${reconnectAttempts})`);
+  setTimeout(() => {
+    connectToBridge().catch(() => {});
+  }, delay);
+}
+
 // 连接到 Bridge Server
 function connectToBridge() {
   return new Promise((resolve, reject) => {
@@ -442,11 +461,13 @@ function connectToBridge() {
     bridgeSocket.on('close', () => {
       bridgeReady = false;
       log('Disconnected from Bridge Server');
+      scheduleReconnect();
     });
 
     bridgeSocket.on('error', (err) => {
       log('Bridge error:', err.message);
       bridgeReady = false;
+      scheduleReconnect();
     });
 
     setTimeout(() => {
